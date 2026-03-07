@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:korpomap/config/theme.dart';
+import 'package:korpomap/config/supabase_config.dart';
 
-void main() {
+
+void main() async{
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await SupabaseConfig.init();
+
   runApp(const KorpoMapApp());
 }
 
