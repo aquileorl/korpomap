@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:korpomap/screens/auth/login_screen.dart';
 import 'package:korpomap/screens/auth/register_screen.dart';
 import 'package:korpomap/services/auth_service.dart';
+import 'package:korpomap/screens/dashboard/dashboard_screen.dart';
 
 final GoRouter router = GoRouter(
   initialLocation: '/login',
@@ -29,7 +30,10 @@ final GoRouter router = GoRouter(
       path: '/register',
       builder: (context, state) => const RegisterScreen(),
     ),
-    // TODO: GoRoute  for /dashboard (Sprint 1, step 10)
+    GoRoute(
+        path: '/dashboard',
+        builder: (context, state) => const DashboardScreen(),
+    ),
   ],
 
 );
