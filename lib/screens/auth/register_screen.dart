@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:korpomap/services/auth_service.dart';
 
 /// Register screen with email, password and confirm password fields.
@@ -35,7 +36,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Account created successfully')),
         );
-        Navigator.pop(context);
+        context.go('/login');
       }
     } catch (e) {
       if (mounted) {

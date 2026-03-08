@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:korpomap/services/auth_service.dart';
-import 'package:korpomap/screens/auth/register_screen.dart';
+import 'package:go_router/go_router.dart';
 
 /// Login screen with email and password fields
 class LoginScreen extends StatefulWidget{
@@ -26,6 +26,7 @@ class _LoginScreenState extends State<LoginScreen>{
           _emailController.text.trim(),
           _passwordController.text.trim(),
       );
+      if (mounted) context.go('/dashboard');
     } catch (e) {
       if(mounted){
         ScaffoldMessenger.of(context).showSnackBar(
@@ -97,14 +98,7 @@ class _LoginScreenState extends State<LoginScreen>{
               ),
               const SizedBox(height: 16),
               TextButton(
-                onPressed: (){
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const RegisterScreen(),
-                    ),
-                  );
-                },
+                onPressed: () => context.go('/register'),
                 child: const Text('Do not have account? Sign up'),
               ),
             ],
