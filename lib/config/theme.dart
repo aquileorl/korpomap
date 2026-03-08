@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
   static const primary = Color(0xFF8B5CF6);    // Morado
@@ -30,6 +31,29 @@ class AppTheme {
     cardTheme: const CardThemeData(
       color: AppColors.card,
       elevation: 0,
+    ),
+    textTheme: TextTheme(
+      headlineLarge: GoogleFonts.plusJakartaSans(
+        fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary,
+      ),
+      headlineMedium: GoogleFonts.plusJakartaSans(
+        fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary,
+      ),
+      titleLarge: GoogleFonts.plusJakartaSans(
+        fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textPrimary,
+      ),
+      titleMedium: GoogleFonts.plusJakartaSans(
+        fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary,
+      ),
+      bodyLarge: GoogleFonts.inter(
+        fontSize: 16, color: AppColors.textPrimary,
+      ),
+      bodyMedium: GoogleFonts.inter(
+        fontSize: 14, color: AppColors.textPrimary,
+      ),
+      bodySmall: GoogleFonts.inter(
+        fontSize: 12, color: AppColors.textSecondary,
+      ),
     ),
   );
 }
