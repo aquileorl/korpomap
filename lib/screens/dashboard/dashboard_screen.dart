@@ -70,13 +70,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   title: Text(patient.name),
                   subtitle: Text(patient.email ?? patient.phone ?? ''),
-                  // TODO: onTap -> navigate to patient details
+                  onTap: () async {
+                    final result = await context.push(
+                      '/patient/${patient.id}/edit',
+                      extra: patient,
+                    );
+                    if (result == true) _loadPatients();
+                  },
                 );
               },
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          //TODO: navigate to create_patient screen
+        onPressed: () async {
+          final result = await context.push('/patient/new');
+          if (result == true) _loadPatients();
         },
         child: const Icon(Icons.add),
       ),
