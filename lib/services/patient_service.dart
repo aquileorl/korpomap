@@ -31,4 +31,5 @@ class PatientService {
   Future<void> delete(String id) async {
     await _table.delete().eq('id', id);
   }
+
 }

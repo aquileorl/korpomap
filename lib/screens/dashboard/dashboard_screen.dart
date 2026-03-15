@@ -41,6 +41,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  Future<void> _confirmDelete(Patient patient) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar paciente'),
+        content: Text('¿Seguro que desea eliminar a ${patient.name}?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+          ),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      )
+    );
+
+    if (confirmed == true){
+      try {
+        await _patientService.delete(patient.id);
+        _loadPatients();
+      } catch(e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error deleting patient: $e')),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -70,6 +102,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   title: Text(patient.name),
                   subtitle: Text(patient.email ?? patient.phone ?? ''),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => _confirmDelete(patient),
+                  ),
                   onTap: () async {
                     final result = await context.push(
                       '/patient/${patient.id}/edit',
