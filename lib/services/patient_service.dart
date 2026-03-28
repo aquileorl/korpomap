@@ -13,6 +13,16 @@ class PatientService {
     return data.map((json) => Patient.fromJson(json)).toList();
   }
 
+  ///Returns patients matching a search query (case-insensitive)
+  Future<List<Patient>> search(String query) async {
+    final data = await _table
+        .select()
+        .ilike('name', '%$query%')
+        .order('name');
+
+    return data.map((json) => Patient.fromJson(json)).toList();
+  }
+
   ///Inserts a new patient and returns it
   Future<Patient> create(Map<String, dynamic> values) async {
     final data = await _table.insert(values).select().single();

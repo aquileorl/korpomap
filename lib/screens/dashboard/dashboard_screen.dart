@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:korpomap/services/auth_service.dart';
@@ -17,13 +18,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   final _authService = AuthService();
   final _patientService = PatientService();
+  final _searchController = TextEditingController();
   List<Patient> _patients = [];
+  List<Patient> _searchResults = [];
   bool _loading = true;
+  bool _isSearching = false;
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _loadPatients();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    _debounce?.cancel();
+    if (query.isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+      });
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 300), () async {
+      final results = await _patientService.search(query);
+      if (mounted) {
+        setState(() {
+          _searchResults = results;
+          _isSearching = true;
+        });
+      }
+    });
   }
 
   Future<void> _loadPatients() async {
@@ -209,7 +241,104 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
+
+                  // Search bar
+                  TextField(
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                    decoration: InputDecoration(
+                      hintText: 'Buscar paciente...',
+                      hintStyle: TextStyle(color: Colors.grey[400]),
+                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.close, color: Colors.grey),
+                              onPressed: () {
+                                _searchController.clear();
+                                _onSearchChanged('');
+                              },
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+
+                  // Search results dropdown
+                  if (_isSearching)
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      margin: const EdgeInsets.only(top: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: _searchResults.isEmpty
+                          ? const Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Text(
+                                'Sin resultados',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: _searchResults.length,
+                              itemBuilder: (context, index) {
+                                final patient = _searchResults[index];
+                                return ListTile(
+                                  leading: CircleAvatar(
+                                    radius: 18,
+                                    backgroundColor: _getAvatarColor(index).withValues(alpha: 0.15),
+                                    child: Text(
+                                      _getInitials(patient.name),
+                                      style: TextStyle(
+                                        color: _getAvatarColor(index),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                  title: Text(
+                                    patient.name,
+                                    style: const TextStyle(fontWeight: FontWeight.w500),
+                                  ),
+                                  subtitle: Text(
+                                    patient.email ?? patient.phone ?? '',
+                                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                                  ),
+                                  dense: true,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  onTap: () async {
+                                    _searchController.clear();
+                                    _onSearchChanged('');
+                                    final result = await context.push(
+                                      '/patient/${patient.id}/edit',
+                                      extra: patient,
+                                    );
+                                    if (result == true) _loadPatients();
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+
+                  const SizedBox(height: 20),
 
                   // Boton nuevo paciente
                   SizedBox(
