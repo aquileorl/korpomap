@@ -3,6 +3,7 @@ import 'package:korpomap/screens/auth/login_screen.dart';
 import 'package:korpomap/screens/auth/register_screen.dart';
 import 'package:korpomap/screens/dashboard/dashboard_screen.dart';
 import 'package:korpomap/screens/patient/patient_form_screen.dart';
+import 'package:korpomap/screens/patient/patient_detail_screen.dart';
 import 'package:korpomap/models/patient.dart';
 import 'package:korpomap/services/auth_service.dart';
 
@@ -39,6 +40,13 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/patient/new',
       builder: (context, state) => const PatientFormScreen(),
+    ),
+    GoRoute(
+      path: '/patient/:id',
+      builder: (context, state) {
+        final patient = state.extra as Patient;
+        return PatientDetailScreen(patient: patient);
+      },
     ),
     GoRoute(
       path: '/patient/:id/edit',

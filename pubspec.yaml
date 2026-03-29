@@ -35,6 +35,9 @@ dependencies:
   go_router: ^14.8.0
   google_fonts: ^6.2.1
   intl: ^0.20.2
+  flutter_svg: ^2.2.4
+  path_parsing: ^1.1.0
+  xml: ^6.6.1
 
 dev_dependencies:
   flutter_test:

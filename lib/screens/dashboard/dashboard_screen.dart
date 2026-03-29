@@ -328,7 +328,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     _searchController.clear();
                                     _onSearchChanged('');
                                     final result = await context.push(
-                                      '/patient/${patient.id}/edit',
+                                      '/patient/${patient.id}',
                                       extra: patient,
                                     );
                                     if (result == true) _loadPatients();
@@ -418,7 +418,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: GestureDetector(
                           onTap: () async {
                             final result = await context.push(
-                              '/patient/${patient.id}/edit',
+                              '/patient/${patient.id}',
                               extra: patient,
                             );
                             if (result == true) _loadPatients();
