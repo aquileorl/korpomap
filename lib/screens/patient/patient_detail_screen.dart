@@ -194,53 +194,40 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
       ),
       body: Column(
         children: [
-          // Patient info card
+          // Patient info card (compact)
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: 20),
-            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
                 CircleAvatar(
-                  radius: 26,
+                  radius: 18,
                   backgroundColor: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
                   child: Text(
                     _getInitials(widget.patient.name),
                     style: const TextStyle(
                       color: Color(0xFF8B5CF6),
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      fontSize: 13,
                     ),
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.patient.name,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        [
-                          if (age.isNotEmpty) age,
-                          if (widget.patient.phone != null) widget.patient.phone,
-                        ].join(' · '),
-                        style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-                      ),
-                    ],
+                  child: Text(
+                    [
+                      if (age.isNotEmpty) age,
+                      if (widget.patient.phone != null) widget.patient.phone,
+                    ].join(' · '),
+                    style: TextStyle(fontSize: 13, color: Colors.grey[500]),
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: const Color(0xFF22C55E).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -250,7 +237,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                     style: TextStyle(
                       color: Color(0xFF22C55E),
                       fontWeight: FontWeight.w600,
-                      fontSize: 12,
+                      fontSize: 11,
                     ),
                   ),
                 ),
@@ -258,7 +245,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
 
           // Tab bar
           Container(
@@ -283,7 +270,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
               children: [
                 // Tab 1: Body map
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                   child: BodyMapWidget(
                     onMuscleGroupTap: _showMuscleGroupSheet,
                   ),

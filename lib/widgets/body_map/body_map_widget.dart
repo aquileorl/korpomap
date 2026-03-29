@@ -65,6 +65,7 @@ class _BodyMapWidgetState extends State<BodyMapWidget> {
   BodySide _currentSide = BodySide.anterior;
   MuscleGroupId? _selectedGroup;
   final _svgKey = GlobalKey();
+  final _transformController = TransformationController();
 
   // Parsed hit regions: MuscleGroupId -> list of Path objects
   Map<MuscleGroupId, List<ui.Path>>? _anteriorPaths;
@@ -82,6 +83,12 @@ class _BodyMapWidgetState extends State<BodyMapWidget> {
   void initState() {
     super.initState();
     _loadPaths();
+  }
+
+  @override
+  void dispose() {
+    _transformController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadPaths() async {
@@ -145,17 +152,22 @@ class _BodyMapWidgetState extends State<BodyMapWidget> {
           ),
         ),
 
-        // SVG body map
+        // SVG body map with zoom/pan
         Expanded(
-          child: Center(
-            child: AspectRatio(
-              aspectRatio: _svgWidth / _svgHeight,
-              child: GestureDetector(
-                key: _svgKey,
-                onTapDown: _handleTap,
-                child: SvgPicture.asset(
-                  _assetPath,
-                  fit: BoxFit.fill,
+          child: InteractiveViewer(
+            transformationController: _transformController,
+            minScale: 1.0,
+            maxScale: 3.0,
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: _svgWidth / _svgHeight,
+                child: GestureDetector(
+                  key: _svgKey,
+                  onTapUp: _handleTap,
+                  child: SvgPicture.asset(
+                    _assetPath,
+                    fit: BoxFit.fill,
+                  ),
                 ),
               ),
             ),
@@ -186,7 +198,7 @@ class _BodyMapWidgetState extends State<BodyMapWidget> {
     );
   }
 
-  void _handleTap(TapDownDetails details) {
+  void _handleTap(TapUpDetails details) {
     final box = _svgKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return;
 
@@ -223,6 +235,7 @@ class _BodyMapWidgetState extends State<BodyMapWidget> {
       onTap: () => setState(() {
         _currentSide = side;
         _selectedGroup = null;
+        _transformController.value = Matrix4.identity();
       }),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
