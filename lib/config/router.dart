@@ -4,7 +4,10 @@ import 'package:korpomap/screens/auth/register_screen.dart';
 import 'package:korpomap/screens/dashboard/dashboard_screen.dart';
 import 'package:korpomap/screens/patient/patient_form_screen.dart';
 import 'package:korpomap/screens/patient/patient_detail_screen.dart';
+import 'package:korpomap/models/injury.dart';
+import 'package:korpomap/models/muscle_group.dart';
 import 'package:korpomap/models/patient.dart';
+import 'package:korpomap/screens/injury/injury_form_screen.dart';
 import 'package:korpomap/services/auth_service.dart';
 
 final GoRouter router = GoRouter(
@@ -53,6 +56,27 @@ final GoRouter router = GoRouter(
       builder: (context, state) {
         final patient = state.extra as Patient;
         return PatientFormScreen(patient: patient);
+      },
+    ),
+    GoRoute(
+      path: '/patient/:id/injury/new',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>;
+        return InjuryFormScreen(
+          patientId: state.pathParameters['id']!,
+          muscleGroup: extra['muscleGroup'] as MuscleGroupId,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/patient/:id/injury/:injuryId/edit',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>;
+        return InjuryFormScreen(
+          patientId: state.pathParameters['id']!,
+          muscleGroup: extra['muscleGroup'] as MuscleGroupId,
+          injury: extra['injury'] as Injury,
+        );
       },
     ),
   ],
