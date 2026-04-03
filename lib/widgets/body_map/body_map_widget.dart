@@ -164,9 +164,37 @@ class _BodyMapWidgetState extends State<BodyMapWidget> {
                 child: GestureDetector(
                   key: _svgKey,
                   onTapUp: _handleTap,
-                  child: SvgPicture.asset(
-                    _assetPath,
-                    fit: BoxFit.fill,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return Stack(
+                        children: [
+                          SvgPicture.asset(
+                            _assetPath,
+                            fit: BoxFit.fill,
+                            width: constraints.maxWidth,
+                            height: constraints.maxHeight,
+                          ),
+                          if (widget.muscleColors.isNotEmpty)
+                            CustomPaint(
+                              size: Size(
+                                constraints.maxWidth,
+                                constraints.maxHeight,
+                              ),
+                              painter: _MuscleColorPainter(
+                                paths: _currentSide == BodySide.anterior
+                                    ? _anteriorPaths
+                                    : _posteriorPaths,
+                                colors: widget.muscleColors,
+                                svgWidth: _svgWidth,
+                                svgHeight: _svgHeight,
+                                svgOffsetX: _currentSide == BodySide.posterior
+                                    ? 724.0
+                                    : 0.0,
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ),
@@ -255,6 +283,56 @@ class _BodyMapWidgetState extends State<BodyMapWidget> {
       ),
     );
   }
+}
+
+/// Paints semi-transparent color overlays on muscle group paths.
+class _MuscleColorPainter extends CustomPainter {
+  final Map<MuscleGroupId, List<ui.Path>>? paths;
+  final Map<MuscleGroupId, Color> colors;
+  final double svgWidth;
+  final double svgHeight;
+  final double svgOffsetX;
+
+  _MuscleColorPainter({
+    this.paths,
+    required this.colors,
+    required this.svgWidth,
+    required this.svgHeight,
+    this.svgOffsetX = 0.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (paths == null || colors.isEmpty) return;
+
+    final scaleX = size.width / svgWidth;
+    final scaleY = size.height / svgHeight;
+
+    canvas.save();
+    canvas.scale(scaleX, scaleY);
+    // Shift posterior paths (viewBox starts at 724) back to widget origin
+    if (svgOffsetX > 0) {
+      canvas.translate(-svgOffsetX, 0);
+    }
+
+    for (final entry in colors.entries) {
+      final groupPaths = paths![entry.key];
+      if (groupPaths == null) continue;
+
+      final paint = Paint()
+        ..color = entry.value.withValues(alpha: 0.4)
+        ..style = PaintingStyle.fill;
+
+      for (final path in groupPaths) {
+        canvas.drawPath(path, paint);
+      }
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _MuscleColorPainter old) =>
+      old.colors != colors || old.paths != paths;
 }
 
 /// Proxy that converts SVG path commands to Flutter Path operations

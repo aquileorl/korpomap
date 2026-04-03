@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:korpomap/models/injury.dart';
 import 'package:korpomap/models/patient.dart';
 import 'package:korpomap/models/muscle_group.dart';
+import 'package:korpomap/services/injury_service.dart';
 import 'package:korpomap/widgets/body_map/body_map_widget.dart';
 
-/// Patient detail screen with body map and injury history tabs
+/// Patient detail screen with body map and injury history tabs.
 class PatientDetailScreen extends StatefulWidget {
   final Patient patient;
 
@@ -17,11 +20,15 @@ class PatientDetailScreen extends StatefulWidget {
 class _PatientDetailScreenState extends State<PatientDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final _injuryService = InjuryService();
+  List<Injury> _injuries = [];
+  bool _loadingInjuries = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadInjuries();
   }
 
   @override
@@ -29,6 +36,36 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     _tabController.dispose();
     super.dispose();
   }
+
+  Future<void> _loadInjuries() async {
+    try {
+      final injuries =
+          await _injuryService.getByPatient(widget.patient.id);
+      if (mounted) {
+        setState(() {
+          _injuries = injuries;
+          _loadingInjuries = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loadingInjuries = false);
+    }
+  }
+
+  Map<MuscleGroupId, Color> get _muscleColors {
+    final map = <MuscleGroupId, Color>{};
+    for (final injury in _injuries) {
+      final current = map[injury.muscleGroup];
+      if (injury.isActive) {
+        map[injury.muscleGroup] = const Color(0xFFEF4444);
+      } else if (current == null) {
+        map[injury.muscleGroup] = const Color(0xFF22C55E);
+      }
+    }
+    return map;
+  }
+
+  int get _activeCount => _injuries.where((i) => i.isActive).length;
 
   String _calculateAge() {
     if (widget.patient.birthDate == null) return '';
@@ -43,119 +80,290 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
 
   void _showMuscleGroupSheet(MuscleGroupId groupId) {
     final group = MuscleGroup.all[groupId]!;
+    final groupInjuries =
+        _injuries.where((i) => i.muscleGroup == groupId).toList();
+    final activeInGroup = groupInjuries.where((i) => i.isActive).length;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.45,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Drag handle
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => Container(
+          height: MediaQuery.of(sheetContext).size.height * 0.50,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
 
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      group.label,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      'Sin lesiones',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Muscle list chips
-            if (group.muscles.length > 1)
+              // Header
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: group.muscles.map((muscle) => Chip(
-                    label: Text(muscle, style: const TextStyle(fontSize: 12)),
-                    backgroundColor: const Color(0xFF8B5CF6).withValues(alpha: 0.08),
-                    side: BorderSide.none,
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  )).toList(),
-                ),
-              ),
-
-            const SizedBox(height: 24),
-
-            // Empty state
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: Row(
                   children: [
-                    Icon(Icons.healing_outlined, size: 48, color: Colors.grey[300]),
-                    const SizedBox(height: 12),
-                    Text(
-                      'No hay lesiones registradas\npara este grupo muscular',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                    Expanded(
+                      child: Text(
+                        group.label,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: activeInGroup > 0
+                            ? const Color(0xFFEF4444).withValues(alpha: 0.1)
+                            : Colors.grey[200],
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        activeInGroup > 0
+                            ? '$activeInGroup activa${activeInGroup > 1 ? 's' : ''}'
+                            : 'Sin lesiones',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: activeInGroup > 0
+                              ? const Color(0xFFEF4444)
+                              : Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
 
-            // Action button
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              child: SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: OutlinedButton.icon(
-                  onPressed: null, // Disabled until Sprint 3
-                  icon: const Icon(Icons.add),
-                  label: const Text('Nueva lesion'),
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              // Muscle list chips
+              if (group.muscles.length > 1)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: group.muscles
+                        .map((muscle) => Chip(
+                              label: Text(muscle,
+                                  style: const TextStyle(fontSize: 12)),
+                              backgroundColor: const Color(0xFF8B5CF6)
+                                  .withValues(alpha: 0.08),
+                              side: BorderSide.none,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
+                            ))
+                        .toList(),
+                  ),
+                ),
+
+              const SizedBox(height: 12),
+
+              // Injury list or empty state
+              Expanded(
+                child: groupInjuries.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.healing_outlined,
+                                size: 48, color: Colors.grey[300]),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No hay lesiones registradas\npara este grupo muscular',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  color: Colors.grey[500], fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: groupInjuries.length,
+                        itemBuilder: (context, index) {
+                          final injury = groupInjuries[index];
+                          return _buildInjuryCard(
+                            injury,
+                            onToggle: () async {
+                              final newStatus = injury.isActive
+                                  ? 'recovered'
+                                  : 'active';
+                              await _injuryService.update(
+                                injury.id,
+                                {...injury.toJson(), 'status': newStatus},
+                              );
+                              await _loadInjuries();
+                              // Refresh bottom sheet data
+                              final updated = _injuries
+                                  .where((i) => i.muscleGroup == groupId)
+                                  .toList();
+                              setSheetState(() {
+                                groupInjuries
+                                  ..clear()
+                                  ..addAll(updated);
+                              });
+                            },
+                            onTap: () async {
+                              Navigator.pop(sheetContext);
+                              final result = await context.push(
+                                '/patient/${widget.patient.id}/injury/${injury.id}/edit',
+                                extra: {
+                                  'muscleGroup': groupId,
+                                  'injury': injury,
+                                },
+                              );
+                              if (result == true) _loadInjuries();
+                            },
+                          );
+                        },
+                      ),
+              ),
+
+              // Action button
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(sheetContext);
+                      final result = await context.push(
+                        '/patient/${widget.patient.id}/injury/new',
+                        extra: {'muscleGroup': groupId},
+                      );
+                      if (result == true) _loadInjuries();
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Nueva lesion'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF8B5CF6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      side: const BorderSide(color: Color(0xFF8B5CF6)),
                     ),
-                    side: BorderSide(color: Colors.grey[300]!),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInjuryCard(
+    Injury injury, {
+    VoidCallback? onToggle,
+    VoidCallback? onTap,
+  }) {
+    final severityColor = switch (injury.severity) {
+      'mild' => const Color(0xFF22C55E),
+      'severe' => const Color(0xFFEF4444),
+      _ => const Color(0xFFF59E0B),
+    };
+    final severityLabel = switch (injury.severity) {
+      'mild' => 'Leve',
+      'severe' => 'Severa',
+      _ => 'Moderada',
+    };
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          children: [
+            // Severity dot
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: severityColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 10),
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    injury.muscle ??
+                        MuscleGroup.all[injury.muscleGroup]?.label ??
+                        '',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$severityLabel · ${DateFormat('dd/MM/yyyy').format(injury.injuryDate)}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  ),
+                  if (injury.description != null &&
+                      injury.description!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        injury.description!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey[400]),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            // Status chip (tappable)
+            GestureDetector(
+              onTap: onToggle,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: injury.isActive
+                      ? const Color(0xFFEF4444).withValues(alpha: 0.1)
+                      : const Color(0xFF22C55E).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  injury.isActive ? 'Activa' : 'Recuperada',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: injury.isActive
+                        ? const Color(0xFFEF4444)
+                        : const Color(0xFF22C55E),
                   ),
                 ),
               ),
@@ -206,7 +414,8 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                  backgroundColor:
+                      const Color(0xFF8B5CF6).withValues(alpha: 0.15),
                   child: Text(
                     _getInitials(widget.patient.name),
                     style: const TextStyle(
@@ -227,15 +436,20 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF22C55E).withValues(alpha: 0.1),
+                    color: _activeCount > 0
+                        ? const Color(0xFFEF4444).withValues(alpha: 0.1)
+                        : const Color(0xFF22C55E).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text(
-                    '0 activas',
+                  child: Text(
+                    '$_activeCount activa${_activeCount != 1 ? 's' : ''}',
                     style: TextStyle(
-                      color: Color(0xFF22C55E),
+                      color: _activeCount > 0
+                          ? const Color(0xFFEF4444)
+                          : const Color(0xFF22C55E),
                       fontWeight: FontWeight.w600,
                       fontSize: 11,
                     ),
@@ -272,25 +486,64 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                   child: BodyMapWidget(
+                    muscleColors: _muscleColors,
                     onMuscleGroupTap: _showMuscleGroupSheet,
                   ),
                 ),
 
-                // Tab 2: History (placeholder)
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.history, size: 48, color: Colors.grey[300]),
-                      const SizedBox(height: 12),
-                      Text(
-                        'El historial de lesiones\nestara disponible proximamente',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey[500]),
-                      ),
-                    ],
-                  ),
-                ),
+                // Tab 2: Injury history
+                _loadingInjuries
+                    ? const Center(child: CircularProgressIndicator())
+                    : _injuries.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.history,
+                                    size: 48, color: Colors.grey[300]),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No hay lesiones registradas\npara este paciente',
+                                  textAlign: TextAlign.center,
+                                  style:
+                                      TextStyle(color: Colors.grey[500]),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _injuries.length,
+                            itemBuilder: (context, index) {
+                              final injury = _injuries[index];
+                              return _buildInjuryCard(
+                                injury,
+                                onToggle: () async {
+                                  final newStatus = injury.isActive
+                                      ? 'recovered'
+                                      : 'active';
+                                  await _injuryService.update(
+                                    injury.id,
+                                    {
+                                      ...injury.toJson(),
+                                      'status': newStatus,
+                                    },
+                                  );
+                                  _loadInjuries();
+                                },
+                                onTap: () async {
+                                  final result = await context.push(
+                                    '/patient/${widget.patient.id}/injury/${injury.id}/edit',
+                                    extra: {
+                                      'muscleGroup': injury.muscleGroup,
+                                      'injury': injury,
+                                    },
+                                  );
+                                  if (result == true) _loadInjuries();
+                                },
+                              );
+                            },
+                          ),
               ],
             ),
           ),
