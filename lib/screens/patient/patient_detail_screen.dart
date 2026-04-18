@@ -53,14 +53,16 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   }
 
   Map<MuscleGroupId, Color> get _muscleColors {
-    final map = <MuscleGroupId, Color>{};
+    final grouped = <MuscleGroupId, List<Injury>>{};
     for (final injury in _injuries) {
-      final current = map[injury.muscleGroup];
-      if (injury.isActive) {
-        map[injury.muscleGroup] = const Color(0xFFEF4444);
-      } else if (current == null) {
-        map[injury.muscleGroup] = const Color(0xFF22C55E);
-      }
+      grouped.putIfAbsent(injury.muscleGroup, () => []).add(injury);
+    }
+    final map = <MuscleGroupId, Color>{};
+    for (final entry in grouped.entries) {
+      final hasActive = entry.value.any((i) => i.isActive);
+      map[entry.key] = hasActive
+          ? const Color(0xFFFF0000)
+          : const Color(0xFFFACC15);
     }
     return map;
   }
