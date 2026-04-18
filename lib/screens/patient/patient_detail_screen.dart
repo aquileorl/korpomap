@@ -23,6 +23,8 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   final _injuryService = InjuryService();
   List<Injury> _injuries = [];
   bool _loadingInjuries = true;
+  String _statusFilter = 'all';
+  MuscleGroupId? _groupFilter;
 
   @override
   void initState() {
@@ -68,6 +70,21 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   }
 
   int get _activeCount => _injuries.where((i) => i.isActive).length;
+  int get _recoveredCount => _injuries.where((i) => !i.isActive).length;
+
+  List<Injury> get _filteredInjuries {
+    final list = _injuries.where((i) {
+      if (_statusFilter == 'active' && !i.isActive) return false;
+      if (_statusFilter == 'recovered' && i.isActive) return false;
+      if (_groupFilter != null && i.muscleGroup != _groupFilter) return false;
+      return true;
+    }).toList()
+      ..sort((a, b) => b.injuryDate.compareTo(a.injuryDate));
+    return list;
+  }
+
+  Set<MuscleGroupId> get _groupsWithInjuries =>
+      _injuries.map((i) => i.muscleGroup).toSet();
 
   String _calculateAge() {
     if (widget.patient.birthDate == null) return '';
@@ -83,8 +100,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   void _showMuscleGroupSheet(MuscleGroupId groupId) {
     final group = MuscleGroup.all[groupId]!;
     final groupInjuries =
-        _injuries.where((i) => i.muscleGroup == groupId).toList();
+        _injuries.where((i) => i.muscleGroup == groupId).toList()
+          ..sort((a, b) => b.injuryDate.compareTo(a.injuryDate));
     final activeInGroup = groupInjuries.where((i) => i.isActive).length;
+    final recoveredInGroup = groupInjuries.length - activeInGroup;
 
     showModalBottomSheet(
       context: context,
@@ -131,20 +150,26 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: activeInGroup > 0
-                            ? const Color(0xFFEF4444).withValues(alpha: 0.1)
-                            : Colors.grey[200],
+                        color: groupInjuries.isEmpty
+                            ? Colors.grey[200]
+                            : activeInGroup > 0
+                                ? const Color(0xFFEF4444)
+                                    .withValues(alpha: 0.1)
+                                : const Color(0xFFFACC15)
+                                    .withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        activeInGroup > 0
-                            ? '$activeInGroup activa${activeInGroup > 1 ? 's' : ''}'
-                            : 'Sin lesiones',
+                        groupInjuries.isEmpty
+                            ? 'Sin lesiones'
+                            : '$activeInGroup activa${activeInGroup == 1 ? '' : 's'} · $recoveredInGroup recuperada${recoveredInGroup == 1 ? '' : 's'}',
                         style: TextStyle(
                           fontSize: 12,
-                          color: activeInGroup > 0
-                              ? const Color(0xFFEF4444)
-                              : Colors.grey[600],
+                          color: groupInjuries.isEmpty
+                              ? Colors.grey[600]
+                              : activeInGroup > 0
+                                  ? const Color(0xFFEF4444)
+                                  : const Color(0xFFCA8A04),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -513,44 +538,171 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                               ],
                             ),
                           )
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _injuries.length,
-                            itemBuilder: (context, index) {
-                              final injury = _injuries[index];
-                              return _buildInjuryCard(
-                                injury,
-                                onToggle: () async {
-                                  final newStatus = injury.isActive
-                                      ? 'recovered'
-                                      : 'active';
-                                  await _injuryService.update(
-                                    injury.id,
-                                    {
-                                      ...injury.toJson(),
-                                      'status': newStatus,
-                                    },
-                                  );
-                                  _loadInjuries();
-                                },
-                                onTap: () async {
-                                  final result = await context.push(
-                                    '/patient/${widget.patient.id}/injury/${injury.id}/edit',
-                                    extra: {
-                                      'muscleGroup': injury.muscleGroup,
-                                      'injury': injury,
-                                    },
-                                  );
-                                  if (result == true) _loadInjuries();
-                                },
-                              );
-                            },
-                          ),
+                        : _buildHistoryView(),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHistoryView() {
+    final filtered = _filteredInjuries;
+    final groups = _groupsWithInjuries.toList()
+      ..sort((a, b) => (MuscleGroup.all[a]?.label ?? '')
+          .compareTo(MuscleGroup.all[b]?.label ?? ''));
+
+    return Column(
+      children: [
+        // Counter
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Row(
+            children: [
+              _buildCounterPill(
+                '$_activeCount activa${_activeCount == 1 ? '' : 's'}',
+                const Color(0xFFEF4444),
+              ),
+              const SizedBox(width: 8),
+              _buildCounterPill(
+                '$_recoveredCount recuperada${_recoveredCount == 1 ? '' : 's'}',
+                const Color(0xFFCA8A04),
+              ),
+              const SizedBox(width: 8),
+              _buildCounterPill(
+                '${_injuries.length} total',
+                Colors.grey[600]!,
+              ),
+            ],
+          ),
+        ),
+
+        // Status filter chips
+        SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              _buildStatusChip('Todas', 'all'),
+              const SizedBox(width: 8),
+              _buildStatusChip('Activas', 'active'),
+              const SizedBox(width: 8),
+              _buildStatusChip('Recuperadas', 'recovered'),
+            ],
+          ),
+        ),
+
+        // Muscle group dropdown
+        if (groups.length > 1)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: DropdownButtonFormField<MuscleGroupId?>(
+              initialValue: _groupFilter,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: 'Grupo muscular',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 8),
+                isDense: true,
+              ),
+              items: [
+                const DropdownMenuItem<MuscleGroupId?>(
+                  value: null,
+                  child: Text('Todos los grupos'),
+                ),
+                ...groups.map(
+                  (g) => DropdownMenuItem<MuscleGroupId?>(
+                    value: g,
+                    child: Text(MuscleGroup.all[g]?.label ?? ''),
+                  ),
+                ),
+              ],
+              onChanged: (value) =>
+                  setState(() => _groupFilter = value),
+            ),
+          ),
+
+        // List
+        Expanded(
+          child: filtered.isEmpty
+              ? Center(
+                  child: Text(
+                    'Sin resultados para el filtro actual',
+                    style: TextStyle(color: Colors.grey[500]),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final injury = filtered[index];
+                    return _buildInjuryCard(
+                      injury,
+                      onToggle: () async {
+                        final newStatus =
+                            injury.isActive ? 'recovered' : 'active';
+                        await _injuryService.update(
+                          injury.id,
+                          {...injury.toJson(), 'status': newStatus},
+                        );
+                        _loadInjuries();
+                      },
+                      onTap: () async {
+                        final result = await context.push(
+                          '/patient/${widget.patient.id}/injury/${injury.id}/edit',
+                          extra: {
+                            'muscleGroup': injury.muscleGroup,
+                            'injury': injury,
+                          },
+                        );
+                        if (result == true) _loadInjuries();
+                      },
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCounterPill(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String label, String value) {
+    final selected = _statusFilter == value;
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => setState(() => _statusFilter = value),
+      selectedColor: const Color(0xFF8B5CF6),
+      labelStyle: TextStyle(
+        color: selected ? Colors.white : Colors.grey[700],
+        fontWeight: FontWeight.w500,
+        fontSize: 12,
+      ),
+      backgroundColor: Colors.grey[100],
+      side: BorderSide.none,
+      showCheckmark: false,
     );
   }
 
