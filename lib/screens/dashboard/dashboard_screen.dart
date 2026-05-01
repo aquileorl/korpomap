@@ -109,8 +109,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   String _getUserName() {
-    final email = _authService.currentUser?.email ?? '';
+    final user = _authService.currentUser;
+    if (user == null) return '';
+
+    final displayName = user.userMetadata?['display_name'] as String?;
+    if (displayName != null && displayName.trim().isNotEmpty) {
+      return displayName;
+    }
+
+    final email = user.email ?? '';
+    if (email.isEmpty) return '';
     final name = email.split('@').first;
+    if (name.isEmpty) return '';
     return name[0].toUpperCase() + name.substring(1);
   }
 
