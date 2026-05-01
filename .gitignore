@@ -46,3 +46,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+
+# Supabase CLI cache (regenerable con `npx supabase link`)
+supabase/
