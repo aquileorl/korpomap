@@ -1,11 +1,23 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseConfig {
+
+  static const String _supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: 'https://iicaqhoalhdpqyfpwvlr.supabase.co',
+  );
+
+  static const String _supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+  );
+
   static Future<void> init() async {
+    if (_supabaseAnonKey.isEmpty){
+      throw StateError('SUPABASE_ANON_KEY missing. Build with --dart-define=SUPABASE_ANON_KEY=<key>');
+    }
     await Supabase.initialize(
-      url: 'https://iicaqhoalhdpqyfpwvlr.supabase.co',
-      anonKey:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlpY2FxaG9hbGhkcHF5ZnB3dmxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5MDY3NTAsImV4cCI6MjA4ODQ4Mjc1MH0.5ce_-czJPKHhNTqfWkSSpo9Nr-n8WOOoJB37g6CEMw0',
+      url: _supabaseUrl,
+      anonKey: _supabaseAnonKey,
     );
   }
 
