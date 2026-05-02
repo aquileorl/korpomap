@@ -50,3 +50,8 @@ app.*.map.json
 
 # Supabase CLI cache (regenerable con `npx supabase link`)
 supabase/
+
+# Android signing (NEVER commit credentials or keystores)
+**/key.properties
+*.keystore
+*.jks
