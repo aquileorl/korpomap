@@ -4,6 +4,10 @@ Cross-platform mobile application for physiotherapists to manage patients and vi
 
 Final project (Trabajo Fin de Grado) for the CFGS Cross-Platform Application Development programme (academic year 2025-2026, online).
 
+## Download
+
+Pre-built signed APKs are published in the [v1.0.0 Release](https://github.com/aquileorl/korpomap/releases/tag/v1.0.0). The Release includes four APK variants: three split per architecture (`arm64-v8a`, `armeabi-v7a`, `x86_64`) and a universal build that runs on any compatible Android device. The Release notes describe how to verify the signature with `apksigner`.
+
 ## Features
 
 - Physiotherapist authentication via Supabase Auth (email + password).
@@ -118,7 +122,7 @@ The backend runs on Supabase with two main tables (`patients`, `injuries`) and R
 The `db_backup/` directory contains an exportable copy of the backend:
 
 - `korpomap_backup.sql` — full schema (tables, indexes, RLS policies).
-- `korpomap_data.sql` — demo dataset with a fictional user (`fisiodemo@example.com`).
+- `korpomap_data.sql` — demo dataset with a fictional user (`fisiodemo1@example.com`).
 
 Restore on a clean PostgreSQL instance:
 
